@@ -46,7 +46,8 @@ const TextEditor = () => {
     if (!socket || !quill) return;
 
     const interval = setInterval(() => {
-      socket.emit("save-document", quill.getContents());
+      const delta = quill.getContents();
+      socket.emit("save-document", delta);
     }, SAVE_INTERVAL_MS);
 
     return () => {
@@ -68,12 +69,14 @@ const TextEditor = () => {
   }, [socket, quill]);
 
   useEffect(() => {
-    if (!socket || !quill) return;
+    if (!quill) return;
 
     const sendChangesHandler = (delta, oldDelta, source) => {
-      if (source !== "user") return;
-      quill.updateContents(delta);
+      if (source === "user" && JSON.stringify(delta) !== JSON.stringify(oldDelta)) {
+        socket.emit("send-changes", delta);
+      }
     };
+
     quill.on("text-change", sendChangesHandler);
 
     return () => {
